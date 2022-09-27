@@ -32,7 +32,7 @@ class TicTacGame:
 
         return input_num
 
-    def check_cell(self, cell) -> bool:
+    def check_cell(self, cell: int) -> bool:
         ''' return True if cell is empty, False instead '''
         if self.board[cell] == 'o' or self.board[cell] == 'x':
             raise ValueError('cell is busy')
@@ -53,7 +53,7 @@ class TicTacGame:
         if self.check_cell(cell):
             self.board[cell] = player_mark
 
-    def check_winner(self):
+    def check_winner(self) -> bool:
         win_cases = [
             (1, 5, 9), (3, 5, 7), (1, 2, 3), (4, 5, 6),
             (7, 8, 9), (1, 4, 7), (2, 5, 8), (3, 6, 9)
@@ -85,7 +85,7 @@ class TicTacGame:
             print('\n[!] game with friend\n')
         return mode
 
-    def make_move(self, player, mark):
+    def make_move(self, player, mark: str) -> bool:
         player(mark)
         self.show_board()
         self.moves += 1
