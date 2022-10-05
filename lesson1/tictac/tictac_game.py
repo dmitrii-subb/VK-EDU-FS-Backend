@@ -30,13 +30,14 @@ class TicTacGame:
         try:
             cell = int(cell)
         except ValueError:
-            raise ValueError(f'"{input_num}" is not an integer number')
+            raise ValueError(f'"{cell}" is not an integer number')
 
         if cell < range[0] or cell > range[1]:
             raise ValueError('number out of range')
 
-        if self.board[cell] in 'ox':
-            raise ValueError('cell is busy')
+        if cell in self.board.keys():
+            if self.board[cell] in 'ox':
+                raise ValueError('cell is busy')
         return cell
 
     def computer_move(self, mark: str) -> None:
