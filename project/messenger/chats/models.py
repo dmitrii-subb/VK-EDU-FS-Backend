@@ -1,15 +1,49 @@
 from django.conf.global_settings import AUTH_USER_MODEL
 from django.db import models
-
-
-class Message(models.Model):
-    text = models.TextField(max_length=1024)
-    date = models.DateTimeField()
-    author = models.ForeignKey(AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+from django.conf import settings
 
 
 class Chat(models.Model):
-    title = models.CharField(max_length=64)
-    description = models.TextField()
-    messages = models.ForeignKey(Message, null=True, on_delete=models.SET_NULL)
+    title = models.CharField(max_length=64, verbose_name='Имя чата')
+    description = models.TextField(verbose_name='Описание')
 
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        on_delete=models.SET_NULL,
+        verbose_name='Автор'
+    )
+
+    def __str__(self):
+        return f'{self.title}'
+
+    class Meta:
+        verbose_name = 'Чат'
+        verbose_name_plural = 'Чаты'
+
+
+class Message(models.Model):
+    text = models.TextField(max_length=1024, verbose_name='Текст сообщения')
+
+    date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        on_delete=models.SET_NULL,
+        verbose_name='Автор',
+        related_name='author_messages'
+    )
+    chat = models.ForeignKey(
+        Chat,
+        null=True,
+        on_delete=models.SET_NULL,
+        verbose_name='Принадлежит чату',
+        related_name='chat_messages'
+    )
+
+    class Meta:
+        verbose_name = 'Сообщение'
+        verbose_name_plural = 'Сообщения'
