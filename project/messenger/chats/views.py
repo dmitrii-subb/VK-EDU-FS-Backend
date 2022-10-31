@@ -186,11 +186,13 @@ def get_chat(request):
     chat_id = data.get('chat_id')
     try:
         chat = Chat.objects.get(id=chat_id)
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, ValueError):
         return JsonResponse({
             'ok': False,
             'result': f'chat with id={chat_id} does not exists'
         })
+
+    members = User.objects.filter(chats__id=chat_id).values()
 
     return JsonResponse({
         'ok': True,
@@ -198,7 +200,8 @@ def get_chat(request):
             'id': chat.id,
             'title': chat.title,
             'description': chat.description,
-            'author_id': chat.author.id
+            'author_id': chat.author.id,
+            'members': list(members),
         }
     })
 
@@ -214,7 +217,7 @@ def get_message(request):
     message_id = data.get('message_id')
     try:
         message = Message.objects.get(id=message_id)
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, ValueError):
         return JsonResponse({
             'ok': False,
             'result': f'message with id={message_id} does not exists'
@@ -232,7 +235,7 @@ def get_message(request):
     })
 
 
-# curl -d '{"title": "dmitrii oreshkin", "description": "test chat", "author": "dmitrii"}' 'http://127.0.0.1:8000/chats/create_chat/'
+# curl -d '{"title": "dmitrii oreshkin", "description": "test chat", "author_id": 1}' 'http://127.0.0.1:8000/chats/create_chat/'
 @require_http_methods(['POST'])
 def create_chat(request):
     parse_result = parse_request(request)
@@ -242,11 +245,11 @@ def create_chat(request):
 
     title = data.get('title')
     description = data.get('description')
-    username = data.get('author')
+    author_id = data.get('author_id')
     try:
-        author = User.objects.get(username=username)
-    except ObjectDoesNotExist:
-        return JsonResponse({'ok': False, 'result': f'user {username} does not exists'})
+        author = User.objects.get(id=author_id)
+    except (ObjectDoesNotExist, ValueError):
+        return JsonResponse({'ok': False, 'result': f'user with id={author_id} does not exists'})
 
     Chat.objects.create(title=title, description=description, author=author)
     return JsonResponse({'ok': True})
@@ -263,7 +266,7 @@ def delete_chat(request):
     chat_id = data.get('chat_id')
     try:
         Chat.objects.get(id=chat_id).delete()
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, ValueError):
         return JsonResponse({'ok': False, 'result': f'chat with id={chat_id} does not exists'})
 
     return JsonResponse({'ok': True})
@@ -282,12 +285,12 @@ def create_message(request):
     chat_id = data.get('chat_id')
     try:
         author = User.objects.get(username=username)
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, ValueError):
         return JsonResponse({'ok': False, 'result': f'user {username} does not exists'})
 
     try:
         chat = Chat.objects.get(id=chat_id)
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, ValueError):
         return JsonResponse({'ok': False, 'result': f'chat with id={chat_id} does not exists'})
 
     Message.objects.create(text=text, author=author, chat=chat)
@@ -305,7 +308,92 @@ def delete_message(request):
     message_id = data.get('message_id')
     try:
         Message.objects.get(id=message_id).delete()
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, ValueError):
         return JsonResponse({'ok': False, 'result': f'message with id={message_id} does not exists'})
 
+    return JsonResponse({'ok': True})
+
+
+# curl -d '{"chat_id": 1, "user_id": 1}' 'http://127.0.0.1:8000/chats/add_member/'
+@require_http_methods(['POST'])
+def add_member(request):
+    parse_result = parse_request(request)
+    if parse_result['ok'] is False:
+        return JsonResponse(parse_result)
+    data = parse_result['data']
+
+    chat_id = data.get('chat_id')
+    try:
+        chat = Chat.objects.get(id=chat_id)
+    except (ObjectDoesNotExist, ValueError):
+        return JsonResponse({'ok': False, 'result': f'chat with id={chat_id} does not exists'})
+
+    user_id = data.get('user_id')
+    try:
+        user = User.objects.get(id=user_id)
+    except (ObjectDoesNotExist, ValueError):
+        return JsonResponse({'ok': False, 'result': f'user with id={user_id} does not exists'})
+
+    user_already_member = User.objects.filter(chats__id=chat_id).first()
+    if user_already_member is not None:
+        return JsonResponse({
+            'ok': False,
+            'result': f'user with id={user_id} already member of the chat with id={chat_id}'
+        })
+
+    user.chats.add(chat)
+    user.save()
+
+    return JsonResponse({
+        'ok': True,
+    })
+
+
+# curl -d '{"chat_id": 1, "user_id": 1}' 'http://127.0.0.1:8000/chats/add_member/'
+@require_http_methods(['POST'])
+def delete_member(request):
+    parse_result = parse_request(request)
+    if parse_result['ok'] is False:
+        return JsonResponse(parse_result)
+    data = parse_result['data']
+
+    chat_id = data.get('chat_id')
+    try:
+        chat = Chat.objects.get(id=chat_id)
+    except (ObjectDoesNotExist, ValueError):
+        return JsonResponse({'ok': False, 'result': f'chat with id={chat_id} does not exists'})
+
+    user_id = data.get('user_id')
+    try:
+        user = User.objects.get(id=user_id)
+    except (ObjectDoesNotExist, ValueError):
+        return JsonResponse({'ok': False, 'result': f'user with id={user_id} does not exists'})
+
+    user.chats.remove(chat)
+    user.save()
+
+    return JsonResponse({
+        'ok': True,
+    })
+
+
+# curl -d '{"message_id": 1}' 'http://127.0.0.1:8000/chats/read_message/'
+@require_http_methods(['POST'])
+def read_message(request):
+    parse_result = parse_request(request)
+    if parse_result['ok'] is False:
+        return JsonResponse(parse_result)
+    data = parse_result['data']
+
+    message_id = data.get('message_id')
+    try:
+        message = Message.objects.get(id=message_id)
+    except (ObjectDoesNotExist, ValueError):
+        return JsonResponse({
+            'ok': False,
+            'result': f'message with id={message_id} does not exists'
+        })
+
+    message.is_readen = True
+    message.save()
     return JsonResponse({'ok': True})

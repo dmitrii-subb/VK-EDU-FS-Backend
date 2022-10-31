@@ -1,3 +1,4 @@
+#from django.contrib.auth.models import AbstractUser
 from django.conf.global_settings import AUTH_USER_MODEL
 from django.db import models
 from django.conf import settings
@@ -13,6 +14,12 @@ class Chat(models.Model):
         on_delete=models.SET_NULL,
         verbose_name='Автор'
     )
+    # accessed_for = models.ForeignKey(
+    #     settings.AUTH_USER_MODEL,
+    #     null=True,
+    #     on_delete=models.SET_NULL,
+    #     verbose_name='Пользователи'
+    # )
 
     def __str__(self):
         return f'{self.title}'
@@ -24,7 +31,8 @@ class Chat(models.Model):
 
 class Message(models.Model):
     text = models.TextField(max_length=1024, verbose_name='Текст сообщения')
-
+    is_readen = models.BooleanField(
+        default=False, verbose_name='Сообщение прочитано')
     date = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Дата создания'

@@ -9,7 +9,11 @@ from chats.views import (
     get_chat,
     get_message,
     get_all_chats,
-    get_all_messages
+    get_all_messages,
+
+    add_member,
+    delete_member,
+    read_message,
 )
 
 urlpatterns = [
@@ -23,4 +27,8 @@ urlpatterns = [
     path('delete_chat/', delete_chat, name='delete_chat'),
     path('create_message/', create_message, name='create_message'),
     path('delete_message/', delete_message, name='delete_message'),
+
+    path('add_member/', add_member, name='add_member'),
+    path('delete_member/', delete_member, name='delete_member'),
+    path('read_message/', read_message, name='read_message')
 ]
