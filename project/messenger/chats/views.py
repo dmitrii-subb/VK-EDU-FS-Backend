@@ -1,6 +1,5 @@
 import json
 
-from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from chats.models import Message, Chat
@@ -33,9 +32,10 @@ def update_chat(request):
     chat_id = data.get('chat_id')
     try:
         chat = Chat.objects.get(id=chat_id)
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, ValueError):
         return JsonResponse({
             'ok': False,
+            'code': 404,
             'result': f'chat with id={chat_id} does not exists'
         })
     title = data.get('title')
@@ -51,16 +51,19 @@ def update_chat(request):
     if author_id is not None:
         try:
             author = User.objects.get(id=author_id)
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, ValueError):
             return JsonResponse({
                 'ok': False,
+                'code': 404,
                 'result': f'user with id={author_id} does not exists'
             })
         chat.author = author
 
     chat.save()
+
     return JsonResponse({
-        'ok': True
+        'ok': True,
+        'code': 200,
     })
 
 
@@ -75,9 +78,10 @@ def update_message(request):
     message_id = data.get('message_id')
     try:
         message = Message.objects.get(id=message_id)
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, ValueError):
         return JsonResponse({
             'ok': False,
+            'code': 404,
             'result': f'message with id={message_id} does not exists'
         })
     text = data.get('text')
@@ -86,16 +90,17 @@ def update_message(request):
     if author_id is not None:
         try:
             author = User.objects.get(id=author_id)
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, ValueError):
             return JsonResponse({
                 'ok': False,
+                'code': 404,
                 'result': f'user with id={author_id} does not exists'
             })
-
         if message.author != author:
             return JsonResponse({
                 'ok': False,
-                'result': f'message with id={message_id} is not owned by user with id={author.id}'
+                'code': 404,
+                'result': f'message(id={message_id}) is\'t owned by user(id={author.id})'
             })
         if text is not None:
             message.text = text
@@ -103,11 +108,13 @@ def update_message(request):
         message.save()
 
     return JsonResponse({
-        'ok': True
+        'ok': True,
+        'code': 200,
     })
 
-
 #  curl -X GET -d '{"chat_id": 1}' 'http://127.0.0.1:8000/chats/get_all_messages/'
+
+
 @require_http_methods(['GET'])
 def get_all_messages(request):
     parse_result = parse_request(request)
@@ -118,16 +125,18 @@ def get_all_messages(request):
     chat_id = data['chat_id']
     try:
         chat = Chat.objects.get(id=chat_id)
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, ValueError):
         return JsonResponse({
             'ok': False,
+            'code': 404,
             'result': f'chat with id={chat_id} does not exists'
         })
     try:
         messages = Message.objects.filter(chat=chat)
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, ValueError):
         return JsonResponse({
             'ok': False,
+            'code': 404,
             'result': f'no messages in chat id={chat.id}'
         })
     response = {}
@@ -138,7 +147,11 @@ def get_all_messages(request):
             'author_id': message.author.id
         }
 
-    return JsonResponse({'ok': True, 'result': response})
+    return JsonResponse({
+        'ok': True,
+        'code': 200,
+        'result': response
+    })
 
 
 # curl -X GET -d '{"user_id": 1}' 'http://127.0.0.1:8000/chats/get_all_chats/'
@@ -152,16 +165,18 @@ def get_all_chats(request):
     user_id = data['user_id']
     try:
         author = User.objects.get(id=user_id)
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, ValueError):
         return JsonResponse({
             'ok': False,
+            'code': 404,
             'result': f'user with id={user_id} does not exists'
         })
     try:
         chats = Chat.objects.filter(author=author)
-    except ObjectDoesNotExist:
+    except (ObjectDoesNotExist, ValueError):
         return JsonResponse({
             'ok': False,
+            'code': 404,
             'result': f'no chats where author is {author.username}'
         })
     response = {}
@@ -172,7 +187,11 @@ def get_all_chats(request):
             'author_id': chat.author.id
         }
 
-    return JsonResponse({'ok': True, 'result': response})
+    return JsonResponse({
+        'ok': True,
+        'code': 200,
+        'result': response
+    })
 
 
 # curl -X GET -d '{"chat_id": 1}' 'http://127.0.0.1:8000/chats/get_chat/'
@@ -189,6 +208,7 @@ def get_chat(request):
     except (ObjectDoesNotExist, ValueError):
         return JsonResponse({
             'ok': False,
+            'code': 404,
             'result': f'chat with id={chat_id} does not exists'
         })
 
@@ -196,6 +216,7 @@ def get_chat(request):
 
     return JsonResponse({
         'ok': True,
+        'code': 200,
         'result': {
             'id': chat.id,
             'title': chat.title,
@@ -220,11 +241,13 @@ def get_message(request):
     except (ObjectDoesNotExist, ValueError):
         return JsonResponse({
             'ok': False,
+            'code': 404,
             'result': f'message with id={message_id} does not exists'
         })
 
     return JsonResponse({
         'ok': True,
+        'code': 200,
         'result': {
             'id': message.id,
             'text': message.text,
@@ -249,10 +272,18 @@ def create_chat(request):
     try:
         author = User.objects.get(id=author_id)
     except (ObjectDoesNotExist, ValueError):
-        return JsonResponse({'ok': False, 'result': f'user with id={author_id} does not exists'})
+        return JsonResponse({
+            'ok': False,
+            'code': 404,
+            'result': f'user with id={author_id} does not exists'
+        })
 
     Chat.objects.create(title=title, description=description, author=author)
-    return JsonResponse({'ok': True})
+
+    return JsonResponse({
+        'ok': True,
+        'code': 200,
+    })
 
 
 # curl -d '{"chat_id": 2}' 'http://127.0.0.1:8000/chats/delete_chat/'
@@ -267,9 +298,16 @@ def delete_chat(request):
     try:
         Chat.objects.get(id=chat_id).delete()
     except (ObjectDoesNotExist, ValueError):
-        return JsonResponse({'ok': False, 'result': f'chat with id={chat_id} does not exists'})
+        return JsonResponse({
+            'ok': False,
+            'code': 404,
+            'result': f'chat with id={chat_id} does not exists'
+        })
 
-    return JsonResponse({'ok': True})
+    return JsonResponse({
+        'ok': True,
+        'code': 200,
+    })
 
 
 # curl -d '{"text": "test message", "author": "dmitrii", "chat_id": 1}' 'http://127.0.0.1:8000/chats/create_message/'
@@ -286,15 +324,27 @@ def create_message(request):
     try:
         author = User.objects.get(username=username)
     except (ObjectDoesNotExist, ValueError):
-        return JsonResponse({'ok': False, 'result': f'user {username} does not exists'})
+        return JsonResponse({
+            'ok': False,
+            'code': 404,
+            'result': f'user {username} does not exists'
+        })
 
     try:
         chat = Chat.objects.get(id=chat_id)
     except (ObjectDoesNotExist, ValueError):
-        return JsonResponse({'ok': False, 'result': f'chat with id={chat_id} does not exists'})
+        return JsonResponse({
+            'ok': False,
+            'code': 404,
+            'result': f'chat with id={chat_id} does not exists'
+        })
 
     Message.objects.create(text=text, author=author, chat=chat)
-    return JsonResponse({'ok': True})
+
+    return JsonResponse({
+        'ok': True,
+        'code': 200,
+    })
 
 
 # curl -d '{"message_id": 1}' 'http://127.0.0.1:8000/chats/delete_message/'
@@ -309,9 +359,16 @@ def delete_message(request):
     try:
         Message.objects.get(id=message_id).delete()
     except (ObjectDoesNotExist, ValueError):
-        return JsonResponse({'ok': False, 'result': f'message with id={message_id} does not exists'})
+        return JsonResponse({
+            'ok': False,
+            'code': 404,
+            'result': f'message with id={message_id} does not exists'
+        })
 
-    return JsonResponse({'ok': True})
+    return JsonResponse({
+        'ok': True,
+        'code': 200,
+    })
 
 
 # curl -d '{"chat_id": 1, "user_id": 1}' 'http://127.0.0.1:8000/chats/add_member/'
@@ -326,18 +383,27 @@ def add_member(request):
     try:
         chat = Chat.objects.get(id=chat_id)
     except (ObjectDoesNotExist, ValueError):
-        return JsonResponse({'ok': False, 'result': f'chat with id={chat_id} does not exists'})
+        return JsonResponse({
+            'ok': False,
+            'code': 404,
+            'result': f'chat with id={chat_id} does not exists'
+        })
 
     user_id = data.get('user_id')
     try:
         user = User.objects.get(id=user_id)
     except (ObjectDoesNotExist, ValueError):
-        return JsonResponse({'ok': False, 'result': f'user with id={user_id} does not exists'})
+        return JsonResponse({
+            'ok': False,
+            'code': 404,
+            'result': f'user with id={user_id} does not exists'
+        })
 
     user_already_member = User.objects.filter(chats__id=chat_id).first()
     if user_already_member is not None:
         return JsonResponse({
             'ok': False,
+            'code': 404,
             'result': f'user with id={user_id} already member of the chat with id={chat_id}'
         })
 
@@ -346,6 +412,7 @@ def add_member(request):
 
     return JsonResponse({
         'ok': True,
+        'code': 200,
     })
 
 
@@ -361,19 +428,28 @@ def delete_member(request):
     try:
         chat = Chat.objects.get(id=chat_id)
     except (ObjectDoesNotExist, ValueError):
-        return JsonResponse({'ok': False, 'result': f'chat with id={chat_id} does not exists'})
+        return JsonResponse({
+            'ok': False,
+            'code': 404,
+            'result': f'chat with id={chat_id} does not exists'
+        })
 
     user_id = data.get('user_id')
     try:
         user = User.objects.get(id=user_id)
     except (ObjectDoesNotExist, ValueError):
-        return JsonResponse({'ok': False, 'result': f'user with id={user_id} does not exists'})
+        return JsonResponse({
+            'ok': False,
+            'code': 404,
+            'result': f'user with id={user_id} does not exists'
+        })
 
     user.chats.remove(chat)
     user.save()
 
     return JsonResponse({
         'ok': True,
+        'code': 200,
     })
 
 
@@ -391,9 +467,14 @@ def read_message(request):
     except (ObjectDoesNotExist, ValueError):
         return JsonResponse({
             'ok': False,
+            'code': 404,
             'result': f'message with id={message_id} does not exists'
         })
 
     message.is_readen = True
     message.save()
-    return JsonResponse({'ok': True})
+
+    return JsonResponse({
+        'ok': True,
+        'code': 200,
+    })
