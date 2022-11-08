@@ -1,22 +1,29 @@
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from users.models import User
+from rest_framework import generics
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+from .models import User
+from .serializers import UserSerializer
 
 
-@require_http_methods(['GET'])
-def get_user(request, user_id):
-    user = User.objects.filter(id=user_id).first()
-    if user is not None:
-        chats = user.chats.all().values()
-        return JsonResponse({
-            'ok': True,
-            'result': {
-                'id': user.id,
-                'username': user.username,
-                'chats': list(chats),
-            }
-        })
-    return JsonResponse({
-        'ok': False,
-        'result': f'user with id={user_id} does not exists',
-    })
+class UserAPIList(generics.ListCreateAPIView):
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        # user_id = self.request.data.get('user_id')
+        # print(self.request.data)
+        # print(self.kwargs)
+        user_id = self.kwargs.get('user_id')
+        return User.objects.filter(id=user_id)
+
+    # def post(self, request):
+    #     data = json.loads(request.body)
+    #     print(data)
+    #     serializer = UserSerializer(data=request.data, many=True)
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save()
+    #     return Response({'post': serializer.data})
+
+# class UserAPIView(generics.ListAPIView):
+#     queryset = User.objects.all()
+#     serializer_class = UserSerializer

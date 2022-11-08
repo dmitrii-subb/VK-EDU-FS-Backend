@@ -14,12 +14,6 @@ class Chat(models.Model):
         on_delete=models.SET_NULL,
         verbose_name='Автор'
     )
-    # accessed_for = models.ForeignKey(
-    #     settings.AUTH_USER_MODEL,
-    #     null=True,
-    #     on_delete=models.SET_NULL,
-    #     verbose_name='Пользователи'
-    # )
 
     def __str__(self):
         return f'{self.title}'
