@@ -1,7 +1,11 @@
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
 
 
-@require_http_methods(['GET', 'POST'])
-def index(request):
-    return render(request, 'start/index.html')
+def login(request):
+    return render(request, 'login.html')
+
+
+def home(request):
+    return render(request, 'home.html')
